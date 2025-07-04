@@ -7,8 +7,8 @@ from pydantic import BaseModel
 from typing import List
 from fastapi.responses import FileResponse
 
-from generate import download_images
-from video_utils import generate_cool_video
+from app.generate import download_images
+from app.video_utils import generate_cool_video
 
 app = FastAPI()
 
