@@ -16,6 +16,7 @@ A FastAPI-based microservice that creates vertical videos (1080x1920) from exact
 
 ## 🧱 Project Structure
 
+```bash
 video-generator/
 ├── app/
 │ ├── main.py # FastAPI app and API routes
@@ -25,7 +26,7 @@ video-generator/
 ├── requirements.txt # Python dependencies
 ├── render.yaml # Render deployment config
 └── README.md
-
+```
 ---
 
 ## 🚀 Getting Started
@@ -42,7 +43,7 @@ video-generator/
 1. Clone the repo:
 
 ```bash
-git clone https://github.com/your-username/video-generator.git
+git clone https://github.com/GranitiGashi/ffmpeg.git
 cd video-generator
 ```
 
