@@ -1,19 +1,6 @@
-# app/video_utils.py
-import os
+# video_utils.py
 import subprocess
-import requests
-
-def download_images(urls, folder):
-    os.makedirs(folder, exist_ok=True)
-    paths = []
-    for i, url in enumerate(urls):
-        filename = os.path.join(folder, f'image{i+1}.jpg')
-        resp = requests.get(url)
-        resp.raise_for_status()
-        with open(filename, 'wb') as f:
-            f.write(resp.content)
-        paths.append(filename)
-    return paths
+import os
 
 def generate_cool_video(image_paths, output='output.mp4', transitions=None):
     if len(image_paths) != 10:

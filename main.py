@@ -1,13 +1,14 @@
-# app/main.py
+# main.py
 import os
 import uuid
-import shutil
+import random
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List
-from app.video_utils import download_images, generate_cool_video
-from app.transitions import get_random_template
+
+from generate import download_images
+from video_utils import generate_cool_video
 
 app = FastAPI()
 
@@ -22,14 +23,27 @@ def generate_video_endpoint(request: VideoRequest):
     output_path = os.path.join(tmp_dir, "output.mp4")
 
     try:
-        transitions, template_name = get_random_template()
+        # Transition templates
+        transition_templates = {
+            "classic": ["fade"] * 9,
+            "slide": ["slideleft", "slideright", "slideup", "slidedown", "slideleft", "slideright", "slideup", "slidedown", "slideleft"],
+            "mix": ["fade", "slideleft", "circlecrop", "rectcrop", "distance", "slideup", "slidedown", "smoothleft", "slideright"],
+            "random": random.sample([
+                "fade", "slideleft", "slideright", "circlecrop", "rectcrop",
+                "distance", "slideup", "slidedown", "smoothleft"
+            ], 9)
+        }
+
+        chosen = random.choice(list(transition_templates.keys()))
+        transitions = transition_templates[chosen]
+
         image_paths = download_images(request.image_urls, folder=tmp_dir)
         generate_cool_video(image_paths, output=output_path, transitions=transitions)
 
         return {
             "status": "success",
             "video_path": f"/videos/{job_id}/output.mp4",
-            "template_used": template_name
+            "template_used": chosen
         }
 
     except Exception as e:
