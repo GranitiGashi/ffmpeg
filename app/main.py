@@ -15,6 +15,10 @@ app = FastAPI()
 class VideoRequest(BaseModel):
     image_urls: List[str]
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 @app.post("/generate-video/")
 def generate_video_endpoint(request: VideoRequest):
     job_id = str(uuid.uuid4())
