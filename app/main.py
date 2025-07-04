@@ -1,14 +1,14 @@
-# main.py
 import os
 import uuid
 import random
+import shutil
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List
+from fastapi.responses import FileResponse
 
-from generate import download_images
-from video_utils import generate_cool_video
+from app.generate import download_images
+from app.video_utils import generate_cool_video
 
 app = FastAPI()
 
@@ -23,7 +23,6 @@ def generate_video_endpoint(request: VideoRequest):
     output_path = os.path.join(tmp_dir, "output.mp4")
 
     try:
-        # Transition templates
         transition_templates = {
             "classic": ["fade"] * 9,
             "slide": ["slideleft", "slideright", "slideup", "slidedown", "slideleft", "slideright", "slideup", "slidedown", "slideleft"],

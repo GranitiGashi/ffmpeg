@@ -1,6 +1,5 @@
-# video_utils.py
 import subprocess
-import os
+
 
 def generate_cool_video(image_paths, output='output.mp4', transitions=None):
     if len(image_paths) != 10:
@@ -16,7 +15,7 @@ def generate_cool_video(image_paths, output='output.mp4', transitions=None):
     filters = []
     for i in range(len(image_paths)):
         filters.append(
-            f"[{i}:v]scale=1080:1920:force_original_aspect_ratio=decrease,"
+            f"[{i}:v]scale=1080:1920:force_original_aspect_ratio=decrease,"\
             f"pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black,format=yuva420p,setsar=1[v{i}]"
         )
 
