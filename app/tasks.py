@@ -4,7 +4,7 @@ import boto3
 from botocore.config import Config
 from app.generate import download_images
 from app.video_utils import generate_cool_video
-from app.celery_worker import celery_app
+from celery_worker import celery_app
 
 R2_BUCKET = os.getenv("R2_BUCKET")
 R2_ACCESS_KEY = os.getenv("R2_ACCESS_KEY")
