@@ -45,7 +45,7 @@ def generate_video_task(self, image_urls: list):
 
         return {
             "status": "completed",
-            "video_url": f"{R2_PUBLIC_URL}/videos/{job_id}.mp4"
+            "video_url": f"{R2_PUBLIC_URL}/video-storage/videos/{job_id}.mp4"
         }
 
     except Exception as e:
