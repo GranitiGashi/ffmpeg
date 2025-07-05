@@ -34,7 +34,7 @@ def generate_video_task(self, image_urls: list):
 
         # Upload to R2
         with open(output_path, "rb") as f:
-            s3.upload_fileobj(f, R2_BUCKET, f"videos/{job_id}.mp4")
+            s3.upload_fileobj(f, R2_BUCKET, f"videos/{job_id}.mp4",  ExtraArgs={"ACL": "public-read"})
 
         # Clean up
         for path in image_paths:
