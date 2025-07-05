@@ -10,6 +10,7 @@ R2_BUCKET = os.getenv("R2_BUCKET")
 R2_ACCESS_KEY = os.getenv("R2_ACCESS_KEY")
 R2_SECRET_KEY = os.getenv("R2_SECRET_KEY")
 R2_ENDPOINT = os.getenv("R2_ENDPOINT")
+R2_PUBLIC_URL = os.getenv("R2_PUBLIC_URL")
 
 # Setup R2 client (S3-compatible)
 s3 = boto3.client(
@@ -44,7 +45,7 @@ def generate_video_task(self, image_urls: list):
 
         return {
             "status": "completed",
-            "video_url": f"{R2_ENDPOINT}/{R2_BUCKET}/videos/{job_id}.mp4"
+            "video_url": f"{R2_PUBLIC_URL}/videos/{job_id}.mp4"
         }
 
     except Exception as e:
