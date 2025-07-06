@@ -36,6 +36,13 @@ def get_user_token(user_id: str):
 async def health():
     return {"status": "ok"}
 
+@app.get("/get-access-token")
+async def get_access_token(user_id: str = "user1"):
+    token = get_user_token(user_id)
+    if token:
+        return JSONResponse(content={"access_token": token})
+    return JSONResponse(content={"error": "Access token not found"}, status_code=404)
+
 # Video Generation Endpoints
 @app.post("/generate-video/")
 def generate_video_endpoint(request: VideoRequest):

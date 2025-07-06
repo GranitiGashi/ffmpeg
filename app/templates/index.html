@@ -23,6 +23,28 @@
       <textarea name="image_urls" required placeholder="url1,url2,...,url10"></textarea><br>
       <button type="submit">Generate Video</button>
     </form>
+
+
+    <h3>Access Token</h3>
+<button onclick="getAccessToken()">Get Access Token</button>
+<pre id="accessTokenBox" style="background:#f4f4f4; padding:10px; margin-top:10px;"></pre>
+
   {% endif %}
+
+  <script>
+  async function getAccessToken() {
+    const res = await fetch('/get-access-token');
+    const box = document.getElementById('accessTokenBox');
+    const data = await res.json();
+
+    if (data.access_token) {
+      box.textContent = data.access_token;
+    } else if (data.error) {
+      box.textContent = "Error: " + data.error;
+    } else {
+      box.textContent = "Unexpected response.";
+    }
+  }
+</script>
 </body>
 </html>
