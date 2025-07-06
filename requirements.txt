@@ -6,3 +6,4 @@ redis
 python-dotenv
 boto3
 jinja2
+python-multipart
