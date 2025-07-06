@@ -83,7 +83,7 @@ async def connect_social():
     params = {
         "client_id": FACEBOOK_APP_ID,
         "redirect_uri": REDIRECT_URI,
-        "scope": "pages_show_list,pages_read_engagement,instagram_basic,manage_pages,publish_to_groups,publish_to_pages,instagram_manage_posts",
+        "scope": "pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_metadata,instagram_basic,instagram_content_publish",
         "response_type": "code",
     }
     auth_url = f"{AUTH_URL}?{requests.compat.urlencode(params)}"
