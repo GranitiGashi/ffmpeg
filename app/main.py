@@ -18,7 +18,7 @@ templates = Jinja2Templates(directory="app/templates")
 # Configuration
 FACEBOOK_APP_ID = "1821140208461098"
 FACEBOOK_APP_SECRET = "f3d34c01a95cd3f83c5984d93bbaad35"
-REDIRECT_URI = os.getenv("REDIRECT_URI", "http://localhost:8000/callback")
+REDIRECT_URI = os.getenv("REDIRECT_URI", "https://ffmpeg-j3vv.onrender.com/callback")
 AUTH_URL = "https://www.facebook.com/v19.0/dialog/oauth"
 TOKEN_URL = "https://graph.facebook.com/v19.0/oauth/access_token"
 
