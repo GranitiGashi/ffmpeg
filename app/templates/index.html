@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head><title>Social Dashboard</title></head>
+<body>
+  <h1>Social Dashboard</h1>
+  {% if not user_data %}
+    <a href="/connect"><button>Connect Facebook/Instagram</button></a>
+  {% else %}
+    <h2>Welcome, {{ user_data.name }} (ID: {{ user_data.id }})</h2>
+    <form action="/post/{{ user_data.id }}" method="post">
+      <label>Content:</label><br>
+      <textarea name="content" required></textarea><br>
+      <label>Platform:</label>
+      <select name="platform">
+        <option value="facebook">Facebook</option>
+        <option value="instagram">Instagram</option>
+      </select><br>
+      <button type="submit">Post</button>
+    </form>
+    <h3>Video Generation</h3>
+    <form action="/generate-video/" method="post">
+      <label>Image URLs (comma-separated):</label><br>
+      <textarea name="image_urls" required placeholder="url1,url2,...,url10"></textarea><br>
+      <button type="submit">Generate Video</button>
+    </form>
+  {% endif %}
+</body>
+</html>
