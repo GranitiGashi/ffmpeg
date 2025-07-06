@@ -13,7 +13,7 @@ from celery_worker import celery_app
 
 load_dotenv()
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="app/templates")
 
 # Configuration
 FACEBOOK_APP_ID = "1821140208461098"
