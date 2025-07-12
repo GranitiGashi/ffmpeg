@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
+from fastapi.responses import RedirectResponse
 
 from app.auth import router as auth_router
 from app.fb_oauth import router as fb_router
@@ -23,11 +24,17 @@ app.include_router(fb_router)
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
 # Home route (base domain)
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     user_data = request.session.get("user")
     return templates.TemplateResponse("index.html", {"request": request, "user_data": user_data})
+
+
+@app.get("/connect")
+async def connect():
+    return RedirectResponse(url="/fb/login")
 
 # Serve static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
