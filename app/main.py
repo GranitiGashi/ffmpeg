@@ -13,12 +13,16 @@ app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key="super-secret")  # use a secure key
 
 # Set up Jinja2 templates
-templates = Jinja2Templates(directory="./templates")
+templates = Jinja2Templates(directory="app/templates")
 
 # Include your routers
 app.include_router(auth_router)
 app.include_router(fb_router)
 
+# Health Check
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 # Home route (base domain)
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
