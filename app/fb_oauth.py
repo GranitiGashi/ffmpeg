@@ -17,7 +17,7 @@ def fb_login(request: Request):
         return RedirectResponse("/login")
 
     state = f"{request.session['user']}:{uuid.uuid4()}"
-    redirect_uri = f"http://{BASE_DOMAIN}/fb/callback"
+    redirect_uri = f"https://{BASE_DOMAIN}/fb/callback"
     url = (
         f"https://www.facebook.com/v19.0/dialog/oauth?"
         f"client_id={FB_APP_ID}&redirect_uri={redirect_uri}"
@@ -31,7 +31,7 @@ def fb_callback(code: str, state: str, request: Request):
     if not user:
         return RedirectResponse("/login")
 
-    redirect_uri = f"http://{BASE_DOMAIN}/fb/callback"
+    redirect_uri = f"https://{BASE_DOMAIN}/fb/callback"
 
     # Step 1: Get short-lived user token
     res = requests.get("https://graph.facebook.com/v19.0/oauth/access_token", params={
