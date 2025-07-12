@@ -7,8 +7,8 @@ load_dotenv()
 
 router = APIRouter()
 
-FB_APP_ID = os.getenv("FB_APP_ID")
-FB_APP_SECRET = os.getenv("FB_APP_SECRET")
+FB_APP_ID = os.getenv("FACEBOOK_APP_ID")
+FB_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
 BASE_DOMAIN = os.getenv("BASE_DOMAIN")
 
 @router.get("/fb/login")
