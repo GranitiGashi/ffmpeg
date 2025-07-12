@@ -13,7 +13,7 @@ app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key="super-secret")  # use a secure key
 
 # Set up Jinja2 templates
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="./templates")
 
 # Include your routers
 app.include_router(auth_router)
