@@ -2,6 +2,7 @@ import os, requests, urllib.parse, uuid
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
 from dotenv import load_dotenv
+from app.client_config import get_n8n_webhook_by_email
 
 load_dotenv()
 
@@ -63,7 +64,23 @@ def fb_callback(code: str, state: str, request: Request):
     page_id = pages[0]["id"]
 
     # Step 4: Send to n8n or store here
-    # requests.post(f"http://n8n-client.webhook.url", json={...})
+    email = user["email"]
+n8n_url = get_n8n_webhook_by_email(email)
+
+if not n8n_url:
+    raise HTTPException(400, f"No webhook configured for {email}")
+
+payload = {
+    "page_id": page_id,
+    "page_token": page_token,
+    "user": user
+}
+
+try:
+    res = requests.post(n8n_url, json=payload)
+    res.raise_for_status()
+except requests.RequestException as e:
+    print(f"Failed to send to n8n webhook for {email}: {e}")
 
     # Logout user from Facebook session in browser (prevent sticky login)
     logout_fb = "https://www.facebook.com/logout.php"
