@@ -3,6 +3,7 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
 from dotenv import load_dotenv
 from app.client_config import get_n8n_webhook_by_email
+from app.supabase_client import upsert_social_record
 
 load_dotenv()
 
