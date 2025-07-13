@@ -1,45 +1,52 @@
+import bcrypt
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from app.supabase_client import (
+    supabase, create_supabase_user, hash_pw, verify_password,
+    get_user_record, insert_user_record
+)
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
-# 🔒 VERY simple “database”
-VALID_EMAIL = "granit.g4shii@gmail.com"
-VALID_PASSWORD = "12345678"
+##############################################################################
+# Sign‑up (admin only) – optional
+##############################################################################
+@router.get("/signup", response_class=HTMLResponse)
+async def signup_form(request: Request):
+    return templates.TemplateResponse("signup.html", {"request": request})
 
-# ── Login form ─────────────────────────────────────────────────────
+@router.post("/signup")
+async def signup(email: str = Form(...), password: str = Form(...)):
+    uid = create_supabase_user(email, password)
+    insert_user_record(uid, email, hash_pw(password))
+    return RedirectResponse("/login", status_code=303)
+
+##############################################################################
+# Login
+##############################################################################
 @router.get("/login", response_class=HTMLResponse)
 async def login_form(request: Request):
-    return templates.TemplateResponse(
-        "login.html", {"request": request, "error": None}
-    )
+    return templates.TemplateResponse("login.html", {"request": request, "error": None})
 
-# ── Form submit ────────────────────────────────────────────────────
 @router.post("/login")
-async def login(
-    request: Request,
-    username: str = Form(...),
-    password: str = Form(...)
-):
-    if username == VALID_EMAIL and password == VALID_PASSWORD:
-        # You can store anything JSON‑serialisable in session
-        request.session["user"] = {
-            "name": username.split("@")[0],
-            "email": username,
-            "id": 1                                      # fake ID for demo
-        }
-        return RedirectResponse("/", status_code=303)
+async def login(request: Request, email: str = Form(...), password: str = Form(...)):
+    record = get_user_record(email)
+    if not record or not verify_password(password, record["password_hash"].encode()):
+        return templates.TemplateResponse("login.html",
+                {"request": request, "error": "Invalid credentials"}, status_code=401)
 
-    # Wrong creds → show form again with error
-    return templates.TemplateResponse(
-        "login.html",
-        {"request": request, "error": "Invalid credentials. Try again."},
-        status_code=401
-    )
+    # Store user info in session
+    request.session["user"] = {
+        "email": email,
+        "supabase_uid": record["id"]
+    }
+    return RedirectResponse("/", status_code=303)
 
-# ── Logout ─────────────────────────────────────────────────────────
+##############################################################################
+# Logout
+##############################################################################
 @router.get("/logout")
 async def logout(request: Request):
     request.session.clear()

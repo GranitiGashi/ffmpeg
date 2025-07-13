@@ -4,6 +4,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
+# ensure Supabase client loads
+import app.supabase_client as _
+
 from app.auth import router as auth_router
 from app.fb_oauth import router as fb_router
 

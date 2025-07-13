@@ -26,77 +26,57 @@ def fb_login(request: Request):
     )
     return RedirectResponse(url)
 
+from app.client_config import get_n8n_webhook_by_email
+
 @router.get("/fb/callback")
-def fb_callback(code: str, state: str, request: Request):
+def fb_callback(
+    request: Request, code: str | None = None,
+    state: str | None = None, error: str | None = None,
+    error_message: str | None = None
+):
+    if error:
+        return HTMLResponse(f"<h3 style='color:red;'>Facebook error: {error_message}</h3>")
+
     user = request.session.get("user")
     if not user:
         return RedirectResponse("/login")
 
     redirect_uri = f"https://{BASE_DOMAIN}/fb/callback"
 
-    # Step 1: Get short-lived user token
-    res = requests.get("https://graph.facebook.com/v19.0/oauth/access_token", params={
-        "client_id": FB_APP_ID,
-        "redirect_uri": redirect_uri,
-        "client_secret": FB_APP_SECRET,
-        "code": code,
-    })
-    short_token = res.json().get("access_token")
+    # 1) short token
+    short = requests.get("https://graph.facebook.com/v19.0/oauth/access_token", params={
+        "client_id": FB_APP_ID, "redirect_uri": redirect_uri,
+        "client_secret": FB_APP_SECRET, "code": code,
+    }).json().get("access_token")
 
-    # Step 2: Get long-lived user token
-    res2 = requests.get("https://graph.facebook.com/v19.0/oauth/access_token", params={
+    # 2) long token
+    long_tok = requests.get("https://graph.facebook.com/v19.0/oauth/access_token", params={
         "grant_type": "fb_exchange_token",
-        "client_id": FB_APP_ID,
-        "client_secret": FB_APP_SECRET,
-        "fb_exchange_token": short_token,
-    })
-    long_token = res2.json().get("access_token")
+        "client_id": FB_APP_ID, "client_secret": FB_APP_SECRET,
+        "fb_exchange_token": short,
+    }).json().get("access_token")
 
-    # Step 3: Get page token
-    pages = requests.get("https://graph.facebook.com/v19.0/me/accounts", params={
-        "access_token": long_token,
-    }).json()["data"]
-    
+    # 3) Get Pages
+    pages = requests.get("https://graph.facebook.com/v19.0/me/accounts",
+                         params={"access_token": long_tok}).json().get("data", [])
     if not pages:
-        raise HTTPException(400, "No pages found")
+        raise HTTPException(400, "No FB pages found")
 
-    page_token = pages[0]["access_token"]
-    page_id = pages[0]["id"]
+    page = pages[0]
+    page_id, page_token = page["id"], page["access_token"]
 
-    # Step 4: Send to n8n or store here
-    email = user["email"]
-n8n_url = get_n8n_webhook_by_email(email)
+    # 4) Instagram business ID
+    ig_id = requests.get(
+        f"https://graph.facebook.com/v19.0/{page_id}",
+        params={"fields": "instagram_business_account", "access_token": page_token}
+    ).json().get("instagram_business_account", {}).get("id")
 
-if not n8n_url:
-    raise HTTPException(400, f"No webhook configured for {email}")
-
-payload = {
-    "page_id": page_id,
-    "page_token": page_token,
-    "user": user
-}
-
-try:
-    res = requests.post(n8n_url, json=payload)
-    res.raise_for_status()
-except requests.RequestException as e:
-    print(f"Failed to send to n8n webhook for {email}: {e}")
-
-    # Logout user from Facebook session in browser (prevent sticky login)
-    logout_fb = "https://www.facebook.com/logout.php"
+    # 5) Save in Supabase
+    upsert_social_record(user["supabase_uid"], page_id, page_token, ig_id)
 
     return HTMLResponse(f"""
-    <html>
-      <head><title>Connected</title></head>
-      <body>
-        <h2>✅ Facebook connected!</h2>
-        <p>Page ID: {page_id}</p>
-        <p><a href="/logout">Log out of app</a></p>
-        <script>
-          setTimeout(() => {{
-            window.location = "{logout_fb}";
-          }}, 2000);
-        </script>
-      </body>
-    </html>
+    <h2>✅ Connected!</h2>
+    <p>FB Page ID: {page_id}</p>
+    <p>IG ID: {ig_id or '—'}</p>
+    <a href='/'>Back to dashboard</a>
     """)
