@@ -3,10 +3,14 @@
 <head><title>Social Dashboard</title></head>
 <body>
   <h1>Social Dashboard</h1>
-  <p>Welcome, {{ user_data.name }} ({{ user_data.email }})</p>
+  <p>Welcome, {{ user_data.full_name }} ({{ user_data.email }})</p>
 
   <!-- Connect FB/IG -->
   <a href="/connect"><button>Connect Facebook/Instagram</button></a>
+
+  <a href="/tiktok/login">
+  <button class="btn btn-dark">Connect TikTok</button>
+</a>
 
   <h3>Log out</h3>
   <a href="/logout"><button>Logout</button></a>

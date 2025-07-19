@@ -73,7 +73,12 @@ def fb_callback(
     ).json().get("instagram_business_account", {}).get("id")
 
     # 5) Save in Supabase
-    upsert_social_record(user["supabase_uid"], page_id, page_token, ig_id)
+    upsert_social_record(
+    uid=user["supabase_uid"],
+    fb_page_id=page_id,
+    fb_page_token=page_token,
+    ig_account_id=ig_id
+)
 
     return HTMLResponse(f"""
     <h2>✅ Connected!</h2>

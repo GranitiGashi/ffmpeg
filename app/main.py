@@ -9,6 +9,7 @@ import app.supabase_client as _
 
 from app.auth import router as auth_router
 from app.fb_oauth import router as fb_router
+from app.tiktok_oauth import router as tiktok_router  # import TikTok router
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key="super-secret")   # change this!
@@ -18,6 +19,7 @@ templates = Jinja2Templates(directory="app/templates")
 # Routers
 app.include_router(auth_router)
 app.include_router(fb_router)
+app.include_router(tiktok_router)  # include TikTok router
 
 # Health check (for Render)
 @app.get("/health")
@@ -35,10 +37,14 @@ async def home(request: Request):
         {"request": request, "user_data": user}      # user_data passed to Jinja
     )
 
-# Friendly alias for FB login
+# Friendly aliases
 @app.get("/connect")
 async def connect():
     return RedirectResponse("/fb/login")
+
+@app.get("/connect/tiktok")
+async def connect_tiktok():
+    return RedirectResponse("/tiktok/login")
 
 # Static assets (css / js / images)
 app.mount("/static", StaticFiles(directory="static"), name="static")
