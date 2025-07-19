@@ -16,22 +16,24 @@ SCOPES = "user.info.basic,video.upload,video.publish"
 
 @router.get("/tiktok/login")
 def tiktok_login(request: Request):
-    user = request.session.get("user")
-    if not user:
+    if not request.session.get("user"):
         return RedirectResponse("/login")
 
-    state = f"{user['supabase_uid']}:{uuid.uuid4()}"
-    redirect_uri = f"{request.base_url}tiktok/callback"
+    state = f"{request.session['user']}:{uuid.uuid4()}"
+    redirect_uri = f"https://{BASE_DOMAIN}/tiktok/callback"  # ✅ No state here!
 
     params = {
         "client_key": TIKTOK_CLIENT_KEY,
         "response_type": "code",
         "scope": SCOPES,
         "redirect_uri": redirect_uri,
-        "state": state
+        "state": state,  # ✅ Pass it separately
+        "optional_scope": "",
     }
-    auth_url = "https://open-api.tiktok.com/platform/oauth/connect/?" + urllib.parse.urlencode(params)
-    return RedirectResponse(auth_url)
+
+    url = "https://www.tiktok.com/auth/authorize?" + urllib.parse.urlencode(params)
+    return RedirectResponse(url)
+
 
 @router.get("/tiktok/callback")
 def tiktok_callback(
