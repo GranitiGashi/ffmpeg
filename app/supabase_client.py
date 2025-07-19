@@ -3,8 +3,8 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 load_dotenv()
 
-_SUPA_URL  = "https://flrutigkqwbtpeobchkd.supabase.co"
-_SUPA_KEY  = "YOUR_SUPABASE_SERVICE_ROLE_KEY"  # replace with env or secret manager
+_SUPA_URL  = os.getenv("SUPABASE_URL")
+_SUPA_KEY  = os.getenv("SUPABASE_KEY")
 
 supabase: Client = create_client(_SUPA_URL, _SUPA_KEY)
 
