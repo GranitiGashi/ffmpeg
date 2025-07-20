@@ -22,7 +22,7 @@ def tiktok_login(request: Request):
     if not user or "id" not in user:
         return RedirectResponse("/login")
     state = f"{json.dumps({'id': user['id']})}:{uuid.uuid4()}"
-    redirect_uri = f"https://{BASE_DOMAIN}/tiktok/callback"
+    redirect_uri = f"https://{BASE_DOMAIN}/auth/callback"
 
     params = {
         "client_key": TIKTOK_CLIENT_KEY,
