@@ -9,7 +9,14 @@ load_dotenv()
 _SUPA_URL = os.getenv("SUPABASE_URL")
 _SUPA_KEY = os.getenv("SUPABASE_KEY")
 
-supabase: Client = create_client(_SUPA_URL, _SUPA_KEY)
+def get_supabase_client(token: Optional[str] = None) -> Client:
+    """Initialize Supabase client with optional auth token."""
+    client = create_client(_SUPA_URL, _SUPA_KEY)
+    if token:
+        client.auth.set_auth(token)
+    return client
+
+supabase: Client = get_supabase_client()
 
 ##############################################################################
 # Supabase helper functions
@@ -57,14 +64,13 @@ def upsert_social_record(
     username: Optional[str] = None,
     access_token: Optional[str] = None,
     refresh_token: Optional[str] = None,
-    metadata: Optional[Dict] = None
+    metadata: Optional[Dict] = None,
+    token: Optional[str] = None
 ) -> None:
-    """
-    Upsert social media credentials into the 'social_accounts' table.
-    """
     if metadata is None:
         metadata = {}
-    supabase.table("social_accounts").upsert({
+    client = get_supabase_client(token)
+    client.table("social_accounts").upsert({
         "user_id": user_id,
         "provider": provider,
         "account_id": account_id,

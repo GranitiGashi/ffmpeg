@@ -94,7 +94,8 @@ def fb_callback(request: Request, code: str | None = None, state: str | None = N
         provider="facebook",
         account_id=page_id,
         access_token=page_token,
-        metadata={"page": page}
+        metadata={"page": page},
+        token=user.get("jwt")  # Pass the JWT token from session
     )
 
     # 6) Save IG Account (if exists)
@@ -104,7 +105,8 @@ def fb_callback(request: Request, code: str | None = None, state: str | None = N
             provider="instagram",
             account_id=ig_id,
             access_token=page_token,
-            metadata={"linked_fb_page_id": page_id}
+            metadata={"linked_fb_page_id": page_id},
+            token=user.get("jwt")  # Pass the JWT token from session
         )
 
     return HTMLResponse(f"""
