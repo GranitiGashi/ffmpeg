@@ -1,6 +1,7 @@
 import os
 import requests
 import uuid
+import urllib.parse
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
 from dotenv import load_dotenv
@@ -32,7 +33,17 @@ def fb_callback(request: Request, code: str | None = None, state: str | None = N
     if error:
         return HTMLResponse(f"<h3 style='color:red;'>Facebook error: {error_message}</h3>")
 
-    user = request.session.get("user")
+    # Parse the state parameter
+    if not state:
+        return RedirectResponse("/login")
+    try:
+        state_data, _ = state.split(':', 1)  # Split state into user data and UUID
+        user = eval(state_data)  # Convert string representation of dict to dict
+        if not user or "supabase_uid" not in user:
+            raise ValueError("Invalid state data")
+    except (ValueError, SyntaxError):
+        return RedirectResponse("/login")
+
     if not user:
         return RedirectResponse("/login")
 
@@ -90,23 +101,23 @@ def fb_callback(request: Request, code: str | None = None, state: str | None = N
 
     # 5) Save FB Page
     upsert_social_record(
-        user_id=user["supabase_uid"],
+        user_id=user["id"],
         provider="facebook",
         account_id=page_id,
         access_token=page_token,
         metadata={"page": page},
-        token=user.get("jwt")  # Pass the JWT token from session
+        token=request.session.get("jwt")  # Pass JWT from session
     )
 
     # 6) Save IG Account (if exists)
     if ig_id:
         upsert_social_record(
-            user_id=user["supabase_uid"],
+            user_id=user["id"],
             provider="instagram",
             account_id=ig_id,
             access_token=page_token,
             metadata={"linked_fb_page_id": page_id},
-            token=user.get("jwt")  # Pass the JWT token from session
+            token=request.session.get("jwt")  # Pass JWT from session
         )
 
     return HTMLResponse(f"""
