@@ -19,8 +19,10 @@ def fb_login(request: Request):
     user = request.session.get("user")
     print(f"Session user in /fb/login: {user}")  # Debug log
     if not user or "id" not in user:
+        print("No valid user session, redirecting to login")  # Debug log
         return RedirectResponse("/login")
     state = f"{json.dumps({'id': user['id']})}:{uuid.uuid4()}"
+    request.session["fb_state"] = state  # Store state in session for validation
     redirect_uri = f"https://{BASE_DOMAIN}/fb/callback"
     url = (
         f"https://www.facebook.com/v19.0/dialog/oauth?"
@@ -35,8 +37,9 @@ def fb_callback(request: Request, code: str | None = None, state: str | None = N
     if error:
         return HTMLResponse(f"<h3 style='color:red;'>Facebook error: {error_message}</h3>")
 
-    if not state:
-        print("State parameter missing")  # Debug log
+    expected_state = request.session.get("fb_state")
+    if not state or state != expected_state:
+        print(f"State mismatch: received {state}, expected {expected_state}")  # Debug log
         return RedirectResponse("/login")
     try:
         print(f"Parsing state: {state}")  # Debug log
@@ -122,6 +125,9 @@ def fb_callback(request: Request, code: str | None = None, state: str | None = N
             metadata={"linked_fb_page_id": page_id},
             token=request.session.get("jwt")
         )
+
+    # Clear the state after successful use
+    request.session.pop("fb_state", None)
 
     return HTMLResponse(f"""
     <h2>✅ Connected!</h2>

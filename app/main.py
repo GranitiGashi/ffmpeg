@@ -12,7 +12,7 @@ from app.fb_oauth import router as fb_router
 from app.tiktok_oauth import router as tiktok_router
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key="super-secret")  # Change this to a secure key!
+app.add_middleware(SessionMiddleware, secret_key="a-very-secure-random-secret-key")  # Change this to a secure key!
 
 templates = Jinja2Templates(directory="app/templates")
 
