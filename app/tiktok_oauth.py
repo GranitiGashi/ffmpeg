@@ -50,7 +50,7 @@ def tiktok_callback(request: Request, code: str | None = None, state: str | None
     except (ValueError, json.JSONDecodeError):
         return RedirectResponse("/login")
 
-    redirect_uri = f"https://{BASE_DOMAIN}/tiktok/callback"
+    redirect_uri = f"https://{BASE_DOMAIN}/auth/callback"
 
     # Exchange code for token
     response = requests.post(
