@@ -54,7 +54,10 @@ def insert_user_record(
         "email": email,
         "password_hash": hashed_pw.decode(),
         "role": role,
-        "permissions": permissions
+        "permissions": permissions,
+        "is_active": True,
+        "created_at": None,  # Supabase will auto-set
+        "updated_at": None   # Supabase will auto-set
     }).execute()
 
 def upsert_social_record(
@@ -77,7 +80,9 @@ def upsert_social_record(
         "username": username,
         "access_token": access_token,
         "refresh_token": refresh_token,
-        "metadata": metadata
+        "metadata": metadata,
+        "created_at": None,  # Supabase will auto-set
+        "updated_at": None   # Supabase will auto-set
     }).execute()
 
 def get_social_by_uid(user_id: str) -> Optional[Dict]:

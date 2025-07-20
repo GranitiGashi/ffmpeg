@@ -2,7 +2,8 @@ import os
 import requests
 import urllib.parse
 import uuid
-from fastapi import APIRouter, Request
+import json
+from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
 from dotenv import load_dotenv
 from app.supabase_client import upsert_social_record
@@ -17,10 +18,10 @@ SCOPES = "user.info.basic,video.upload,video.publish"
 
 @router.get("/tiktok/login")
 def tiktok_login(request: Request):
-    if not request.session.get("user"):
+    user = request.session.get("user")
+    if not user or "id" not in user:
         return RedirectResponse("/login")
-
-    state = f"{request.session['user']}:{uuid.uuid4()}"
+    state = f"{json.dumps({'id': user['id']})}:{uuid.uuid4()}"
     redirect_uri = f"https://{BASE_DOMAIN}/tiktok/callback"
 
     params = {
@@ -39,8 +40,14 @@ def tiktok_callback(request: Request, code: str | None = None, state: str | None
     if error:
         return HTMLResponse(f"<h3 style='color:red;'>TikTok error: {error_description}</h3>")
 
-    user = request.session.get("user")
-    if not user:
+    if not state:
+        return RedirectResponse("/login")
+    try:
+        state_data, _ = state.split(':', 1)
+        user = json.loads(state_data)
+        if not user or "id" not in user:
+            raise ValueError("Invalid state data")
+    except (ValueError, json.JSONDecodeError):
         return RedirectResponse("/login")
 
     redirect_uri = f"https://{BASE_DOMAIN}/tiktok/callback"
@@ -71,12 +78,13 @@ def tiktok_callback(request: Request, code: str | None = None, state: str | None
 
     # Save TikTok account
     upsert_social_record(
-        user_id=user["supabase_uid"],
+        user_id=user["id"],
         provider="tiktok",
         account_id=open_id,
         access_token=access_token,
         refresh_token=refresh_token,
-        metadata=data
+        metadata=data,
+        token=request.session.get("jwt")
     )
 
     return HTMLResponse(f"""

@@ -11,7 +11,7 @@ router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 ##############################################################################
-# Sign‑up (admin only) – optional
+# Sign-up (admin only) – optional
 ##############################################################################
 @router.get("/signup", response_class=HTMLResponse)
 async def signup_form(request: Request):
@@ -37,10 +37,12 @@ async def login(request: Request, email: str = Form(...), password: str = Form(.
         return templates.TemplateResponse("login.html",
                 {"request": request, "error": "Invalid credentials"}, status_code=401)
 
-    # Store user info in session
+    # Store user info in session with JWT
+    session = supabase.auth.sign_in_with_password({"email": email, "password": password})
     request.session["user"] = {
+        "id": record["id"],
         "email": email,
-        "supabase_uid": record["id"]
+        "jwt": session.session.access_token
     }
     return RedirectResponse("/", status_code=303)
 

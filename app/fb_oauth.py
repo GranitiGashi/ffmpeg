@@ -1,7 +1,7 @@
 import os
 import requests
 import uuid
-import urllib.parse
+import json
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
 from dotenv import load_dotenv
@@ -16,10 +16,10 @@ BASE_DOMAIN = os.getenv("BASE_DOMAIN")
 
 @router.get("/fb/login")
 def fb_login(request: Request):
-    if not request.session.get("user"):
+    user = request.session.get("user")
+    if not user or "id" not in user:
         return RedirectResponse("/login")
-
-    state = f"{request.session['user']}:{uuid.uuid4()}"
+    state = f"{json.dumps({'id': user['id']})}:{uuid.uuid4()}"
     redirect_uri = f"https://{BASE_DOMAIN}/fb/callback"
     url = (
         f"https://www.facebook.com/v19.0/dialog/oauth?"
@@ -33,18 +33,14 @@ def fb_callback(request: Request, code: str | None = None, state: str | None = N
     if error:
         return HTMLResponse(f"<h3 style='color:red;'>Facebook error: {error_message}</h3>")
 
-    # Parse the state parameter
     if not state:
         return RedirectResponse("/login")
     try:
-        state_data, _ = state.split(':', 1)  # Split state into user data and UUID
-        user = eval(state_data)  # Convert string representation of dict to dict
-        if not user or "supabase_uid" not in user:
+        state_data, _ = state.split(':', 1)
+        user = json.loads(state_data)
+        if not user or "id" not in user:
             raise ValueError("Invalid state data")
-    except (ValueError, SyntaxError):
-        return RedirectResponse("/login")
-
-    if not user:
+    except (ValueError, json.JSONDecodeError):
         return RedirectResponse("/login")
 
     redirect_uri = f"https://{BASE_DOMAIN}/fb/callback"
@@ -106,7 +102,7 @@ def fb_callback(request: Request, code: str | None = None, state: str | None = N
         account_id=page_id,
         access_token=page_token,
         metadata={"page": page},
-        token=request.session.get("jwt")  # Pass JWT from session
+        token=request.session.get("jwt")
     )
 
     # 6) Save IG Account (if exists)
@@ -117,7 +113,7 @@ def fb_callback(request: Request, code: str | None = None, state: str | None = N
             account_id=ig_id,
             access_token=page_token,
             metadata={"linked_fb_page_id": page_id},
-            token=request.session.get("jwt")  # Pass JWT from session
+            token=request.session.get("jwt")
         )
 
     return HTMLResponse(f"""

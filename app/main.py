@@ -4,22 +4,22 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
-# ensure Supabase client loads
+# Ensure Supabase client loads
 import app.supabase_client as _
 
 from app.auth import router as auth_router
 from app.fb_oauth import router as fb_router
-from app.tiktok_oauth import router as tiktok_router  # import TikTok router
+from app.tiktok_oauth import router as tiktok_router
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key="super-secret")   # change this!
+app.add_middleware(SessionMiddleware, secret_key="super-secret")  # Change this to a secure key!
 
 templates = Jinja2Templates(directory="app/templates")
 
 # Routers
 app.include_router(auth_router)
 app.include_router(fb_router)
-app.include_router(tiktok_router)  # include TikTok router
+app.include_router(tiktok_router)
 
 # Health check (for Render)
 @app.get("/health")
@@ -34,7 +34,7 @@ async def home(request: Request):
         return RedirectResponse("/login")
     return templates.TemplateResponse(
         "index.html",
-        {"request": request, "user_data": user}      # user_data passed to Jinja
+        {"request": request, "user_data": user}
     )
 
 # Friendly aliases
