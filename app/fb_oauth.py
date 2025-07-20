@@ -2,6 +2,7 @@ import os
 import requests
 import uuid
 import json
+import urllib.parse
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
 from dotenv import load_dotenv
@@ -21,13 +22,13 @@ def fb_login(request: Request):
     if not user or "id" not in user:
         print("No valid user session, redirecting to login")  # Debug log
         return RedirectResponse("/login")
-    state = f"{json.dumps({'id': user['id']})}:{uuid.uuid4()}"
+    state = f"{json.dumps({'id': user['id']}).replace(' ', '')}:{uuid.uuid4()}"  # Remove spaces for safety
     request.session["fb_state"] = state  # Store state in session for validation
     redirect_uri = f"https://{BASE_DOMAIN}/fb/callback"
     url = (
         f"https://www.facebook.com/v19.0/dialog/oauth?"
         f"client_id={FB_APP_ID}&redirect_uri={redirect_uri}"
-        f"&state={state}&scope=pages_show_list,pages_manage_posts"
+        f"&state={urllib.parse.quote(state)}&scope=pages_show_list,pages_manage_posts"
     )
     return RedirectResponse(url)
 
@@ -38,13 +39,13 @@ def fb_callback(request: Request, code: str | None = None, state: str | None = N
         return HTMLResponse(f"<h3 style='color:red;'>Facebook error: {error_message}</h3>")
 
     expected_state = request.session.get("fb_state")
-    if not state or state != expected_state:
+    if not state or not expected_state or state != expected_state:
         print(f"State mismatch: received {state}, expected {expected_state}")  # Debug log
         return RedirectResponse("/login")
     try:
         print(f"Parsing state: {state}")  # Debug log
         state_data, _ = state.split(':', 1)
-        user = json.loads(state_data)
+        user = json.loads(state_data.replace("'", '"'))  # Handle potential single quotes
         print(f"Parsed user: {user}")  # Debug log
         if not user or "id" not in user:
             print("Invalid state data: missing id")  # Debug log
