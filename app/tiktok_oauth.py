@@ -32,7 +32,7 @@ def tiktok_login(request: Request):
         "state": state,
     }
 
-    url = "https://www.tiktok.com/auth/authorize?" + urllib.parse.urlencode(params)
+    url = "https://www.tiktok.com/v2/auth/authorize?" + urllib.parse.urlencode(params)
     return RedirectResponse(url)
 
 @router.get("/tiktok/callback")
@@ -54,15 +54,15 @@ def tiktok_callback(request: Request, code: str | None = None, state: str | None
 
     # Exchange code for token
     response = requests.post(
-        "https://open-api.tiktok.com/oauth/access_token/",
-        json={
-            "client_key": TIKTOK_CLIENT_KEY,
-            "client_secret": TIKTOK_CLIENT_SECRET,
-            "code": code,
-            "grant_type": "authorization_code",
-            "redirect_uri": redirect_uri
-        },
-        headers={"Content-Type": "application/json"}
+    "https://open.tiktokapis.com/v2/oauth/token/",
+    data={
+        "client_key": TIKTOK_CLIENT_KEY,
+        "client_secret": TIKTOK_CLIENT_SECRET,
+        "code": code,
+        "grant_type": "authorization_code",
+        "redirect_uri": redirect_uri
+    },
+    headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
     if not response.ok:
         raise HTTPException(400, "Failed to get TikTok access token")
