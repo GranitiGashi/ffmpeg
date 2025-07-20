@@ -71,7 +71,7 @@ def insert_user_record(
 
 
 def upsert_social_record(
-    uid: str,
+    user_id: str,
     fb_page_id: Optional[str] = None,
     fb_page_token: Optional[str] = None,
     ig_account_id: Optional[str] = None,
@@ -83,7 +83,7 @@ def upsert_social_record(
     Upsert social media credentials into the 'social_accounts' table.
     """
     supabase.table("social_accounts").upsert({
-        "user_id": uid,
+        "user_id": user_id,
         "fb_page_id": fb_page_id,
         "fb_page_token": fb_page_token,
         "ig_account_id": ig_account_id,
@@ -93,9 +93,9 @@ def upsert_social_record(
     }).execute()
 
 
-def get_social_by_uid(uid: str) -> Optional[Dict]:
+def get_social_by_uid(user_id: str) -> Optional[Dict]:
     """
     Get all social account data for a given user_id.
     """
-    res = supabase.table("social_accounts").select("*").eq("user_id", uid).single().execute()
+    res = supabase.table("social_accounts").select("*").eq("user_id", user_id).single().execute()
     return res.data if res.data else None
