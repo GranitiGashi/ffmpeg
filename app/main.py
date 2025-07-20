@@ -10,6 +10,7 @@ import app.supabase_client as _
 from app.auth import router as auth_router
 from app.fb_oauth import router as fb_router
 from app.tiktok_oauth import router as tiktok_router
+from app.routes import api
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key="a-very-secure-random-secret-key")  # Change this to a secure key!
@@ -20,6 +21,7 @@ templates = Jinja2Templates(directory="app/templates")
 app.include_router(auth_router)
 app.include_router(fb_router)
 app.include_router(tiktok_router)
+app.include_router(api.router)
 
 # Health check (for Render)
 @app.get("/health")

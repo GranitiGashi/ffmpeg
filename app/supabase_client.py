@@ -86,9 +86,11 @@ def upsert_social_record(
         "updated_at": None   # Supabase will auto-set
     }).execute()
 
-def get_social_by_uid(user_id: str) -> Optional[Dict]:
-    res = supabase.table("social_accounts").select("*").eq("user_id", user_id).execute()
-    return res.data[0] if res.data else None
+def get_social_accounts(user_id):
+    response = supabase.table("social_accounts").select("*").eq("user_id", user_id).execute()
+    if response.error:
+        raise Exception(response.error.message)
+    return response.data
 
 def test_connection():
     resp = supabase.table("users_app").select("*").limit(1).execute()
