@@ -1,4 +1,7 @@
-import os, requests, urllib.parse, uuid
+import os
+import requests
+import urllib.parse
+import uuid
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse, HTMLResponse
 from dotenv import load_dotenv
@@ -11,7 +14,6 @@ TIKTOK_CLIENT_KEY = os.getenv("TIKTOK_CLIENT_KEY")
 TIKTOK_CLIENT_SECRET = os.getenv("TIKTOK_CLIENT_SECRET")
 BASE_DOMAIN = os.getenv("BASE_DOMAIN")
 SCOPES = "user.info.basic,video.upload,video.publish"
-
 
 @router.get("/tiktok/login")
 def tiktok_login(request: Request):
@@ -31,7 +33,6 @@ def tiktok_login(request: Request):
 
     url = "https://www.tiktok.com/auth/authorize?" + urllib.parse.urlencode(params)
     return RedirectResponse(url)
-
 
 @router.get("/tiktok/callback")
 def tiktok_callback(request: Request, code: str | None = None, state: str | None = None, error: str | None = None, error_description: str | None = None):
@@ -56,6 +57,8 @@ def tiktok_callback(request: Request, code: str | None = None, state: str | None
         },
         headers={"Content-Type": "application/json"}
     )
+    if not response.ok:
+        raise HTTPException(400, "Failed to get TikTok access token")
     token_resp = response.json()
 
     if "data" not in token_resp or "access_token" not in token_resp["data"]:
@@ -71,7 +74,6 @@ def tiktok_callback(request: Request, code: str | None = None, state: str | None
         user_id=user["supabase_uid"],
         provider="tiktok",
         account_id=open_id,
-        username=None,
         access_token=access_token,
         refresh_token=refresh_token,
         metadata=data
