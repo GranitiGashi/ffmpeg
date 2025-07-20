@@ -17,6 +17,7 @@ BASE_DOMAIN = os.getenv("BASE_DOMAIN")
 @router.get("/fb/login")
 def fb_login(request: Request):
     user = request.session.get("user")
+    print(f"Session user in /fb/login: {user}")  # Debug log
     if not user or "id" not in user:
         return RedirectResponse("/login")
     state = f"{json.dumps({'id': user['id']})}:{uuid.uuid4()}"
@@ -30,17 +31,23 @@ def fb_login(request: Request):
 
 @router.get("/fb/callback")
 def fb_callback(request: Request, code: str | None = None, state: str | None = None, error: str | None = None, error_message: str | None = None):
+    print(f"Callback params: code={code}, state={state}, error={error}, error_message={error_message}")  # Debug log
     if error:
         return HTMLResponse(f"<h3 style='color:red;'>Facebook error: {error_message}</h3>")
 
     if not state:
+        print("State parameter missing")  # Debug log
         return RedirectResponse("/login")
     try:
+        print(f"Parsing state: {state}")  # Debug log
         state_data, _ = state.split(':', 1)
         user = json.loads(state_data)
+        print(f"Parsed user: {user}")  # Debug log
         if not user or "id" not in user:
+            print("Invalid state data: missing id")  # Debug log
             raise ValueError("Invalid state data")
-    except (ValueError, json.JSONDecodeError):
+    except (ValueError, json.JSONDecodeError) as e:
+        print(f"State parsing error: {str(e)}")  # Debug log
         return RedirectResponse("/login")
 
     redirect_uri = f"https://{BASE_DOMAIN}/fb/callback"

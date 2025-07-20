@@ -37,8 +37,9 @@ def hash_pw(plain: str) -> bytes:
     return bcrypt.hashpw(plain.encode(), bcrypt.gensalt())
 
 def get_user_record(email: str) -> Optional[Dict]:
-    resp = supabase.table("users_app").select("*").eq("email", email).single().execute()
-    return resp.data if resp.data else None
+    resp = supabase.table("users_app").select("*").eq("email", email).execute()
+    data = resp.data
+    return data[0] if data else None  # Return the first record if exists, None otherwise
 
 def insert_user_record(
     uid: str,
@@ -88,3 +89,7 @@ def upsert_social_record(
 def get_social_by_uid(user_id: str) -> Optional[Dict]:
     res = supabase.table("social_accounts").select("*").eq("user_id", user_id).execute()
     return res.data[0] if res.data else None
+
+def test_connection():
+    resp = supabase.table("users_app").select("*").limit(1).execute()
+    print(f"Test query result: {resp.data}")

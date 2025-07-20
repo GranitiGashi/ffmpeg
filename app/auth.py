@@ -18,10 +18,13 @@ async def signup_form(request: Request):
     return templates.TemplateResponse("signup.html", {"request": request})
 
 @router.post("/signup")
-async def signup(email: str = Form(...), password: str = Form(...)):
-    uid = create_supabase_user(email, password)
-    insert_user_record(uid, email, hash_pw(password))
-    return RedirectResponse("/login", status_code=303)
+async def signup(request: Request, email: str = Form(...), password: str = Form(...)):
+    try:
+        uid = create_supabase_user(email, password)
+        insert_user_record(uid, email, hash_pw(password))
+        return RedirectResponse("/login", status_code=303)
+    except Exception as e:
+        return templates.TemplateResponse("signup.html", {"request": request, "error": str(e)}, status_code=400)
 
 ##############################################################################
 # Login
@@ -33,19 +36,22 @@ async def login_form(request: Request):
 @router.post("/login")
 async def login(request: Request, email: str = Form(...), password: str = Form(...)):
     record = get_user_record(email)
-    if not record or not verify_password(password, record["password_hash"].encode()):
-        return templates.TemplateResponse("login.html",
-                {"request": request, "error": "Invalid credentials"}, status_code=401)
+    if not record:
+        return templates.TemplateResponse("login.html", {"request": request, "error": "User not found"}, status_code=401)
+    if not verify_password(password, record["password_hash"].encode()):
+        return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid credentials"}, status_code=401)
 
-    # Store user info in session with JWT
-    session = supabase.auth.sign_in_with_password({"email": email, "password": password})
-    request.session["user"] = {
-        "id": record["id"],
-        "email": email,
-        "jwt": session.session.access_token
-    }
-    return RedirectResponse("/", status_code=303)
-
+    try:
+        session = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        request.session["user"] = {
+            "id": record["id"],
+            "email": email,
+            "jwt": session.session.access_token
+        }
+        print(f"Login successful, session set: {request.session['user']}")  # Debug log
+        return RedirectResponse("/", status_code=303)
+    except Exception as e:
+        return templates.TemplateResponse("login.html", {"request": request, "error": f"Authentication failed: {str(e)}"}, status_code=401)
 ##############################################################################
 # Logout
 ##############################################################################
