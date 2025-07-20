@@ -1,17 +1,16 @@
-import os, requests, urllib.parse, uuid
+import os, requests, uuid
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
 from dotenv import load_dotenv
-from app.client_config import get_n8n_webhook_by_email
 from app.supabase_client import upsert_social_record
 
 load_dotenv()
-
 router = APIRouter()
 
 FB_APP_ID = os.getenv("FACEBOOK_APP_ID")
 FB_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
 BASE_DOMAIN = os.getenv("BASE_DOMAIN")
+
 
 @router.get("/fb/login")
 def fb_login(request: Request):
@@ -27,14 +26,9 @@ def fb_login(request: Request):
     )
     return RedirectResponse(url)
 
-from app.client_config import get_n8n_webhook_by_email
 
 @router.get("/fb/callback")
-def fb_callback(
-    request: Request, code: str | None = None,
-    state: str | None = None, error: str | None = None,
-    error_message: str | None = None
-):
+def fb_callback(request: Request, code: str | None = None, state: str | None = None, error: str | None = None, error_message: str | None = None):
     if error:
         return HTMLResponse(f"<h3 style='color:red;'>Facebook error: {error_message}</h3>")
 
@@ -44,41 +38,59 @@ def fb_callback(
 
     redirect_uri = f"https://{BASE_DOMAIN}/fb/callback"
 
-    # 1) short token
+    # 1) Get short-lived token
     short = requests.get("https://graph.facebook.com/v19.0/oauth/access_token", params={
         "client_id": FB_APP_ID, "redirect_uri": redirect_uri,
         "client_secret": FB_APP_SECRET, "code": code,
     }).json().get("access_token")
 
-    # 2) long token
+    # 2) Exchange for long-lived token
     long_tok = requests.get("https://graph.facebook.com/v19.0/oauth/access_token", params={
         "grant_type": "fb_exchange_token",
-        "client_id": FB_APP_ID, "client_secret": FB_APP_SECRET,
+        "client_id": FB_APP_ID,
+        "client_secret": FB_APP_SECRET,
         "fb_exchange_token": short,
     }).json().get("access_token")
 
-    # 3) Get Pages
-    pages = requests.get("https://graph.facebook.com/v19.0/me/accounts",
-                         params={"access_token": long_tok}).json().get("data", [])
+    # 3) Get user pages
+    pages = requests.get("https://graph.facebook.com/v19.0/me/accounts", params={
+        "access_token": long_tok
+    }).json().get("data", [])
+    
     if not pages:
         raise HTTPException(400, "No FB pages found")
 
     page = pages[0]
     page_id, page_token = page["id"], page["access_token"]
 
-    # 4) Instagram business ID
+    # 4) Get Instagram business account (optional)
     ig_id = requests.get(
         f"https://graph.facebook.com/v19.0/{page_id}",
         params={"fields": "instagram_business_account", "access_token": page_token}
     ).json().get("instagram_business_account", {}).get("id")
 
-    # 5) Save in Supabase
+    # 5) Save FB Page
     upsert_social_record(
-    uid=user["supabase_uid"],
-    fb_page_id=page_id,
-    fb_page_token=page_token,
-    ig_account_id=ig_id
-)
+        user_id=user["supabase_uid"],
+        provider="facebook",
+        account_id=page_id,
+        username=None,
+        access_token=page_token,
+        refresh_token=None,
+        metadata={"page": page}
+    )
+
+    # 6) Save IG Account (if exists)
+    if ig_id:
+        upsert_social_record(
+            user_id=user["supabase_uid"],
+            provider="instagram",
+            account_id=ig_id,
+            username=None,
+            access_token=page_token,
+            refresh_token=None,
+            metadata={"linked_fb_page_id": page_id}
+        )
 
     return HTMLResponse(f"""
     <h2>✅ Connected!</h2>
