@@ -6,6 +6,7 @@ from app.supabase_client import (
     supabase, create_supabase_user, hash_pw, verify_password,
     get_user_record, insert_user_record
 )
+from datetime import datetime, timedelta
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -43,15 +44,19 @@ async def login(request: Request, email: str = Form(...), password: str = Form(.
 
     try:
         session = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        jwt_expires_at = datetime.fromtimestamp(session.session.expires_at)
         request.session["user"] = {
             "id": record["id"],
             "email": email,
-            "jwt": session.session.access_token
+            "jwt": session.session.access_token,
+            "expires_at": jwt_expires_at.isoformat()  # Store expiration for reference
         }
         print(f"Login successful, session set: {request.session['user']}")  # Debug log
+        print(f"JWT expires at: {jwt_expires_at}")  # Debug log
         return RedirectResponse("/", status_code=303)
     except Exception as e:
         return templates.TemplateResponse("login.html", {"request": request, "error": f"Authentication failed: {str(e)}"}, status_code=401)
+
 ##############################################################################
 # Logout
 ##############################################################################

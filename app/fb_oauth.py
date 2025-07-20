@@ -13,102 +13,107 @@ router = APIRouter()
 
 FB_APP_ID = os.getenv("FACEBOOK_APP_ID")
 FB_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
-BASE_DOMAIN = os.getenv("BASE_DOMAIN")
+BASE_DOMAIN = os.getenv("BASE_DOMAIN", "localhost:8000")  # Default for local testing
 
 @router.get("/fb/login")
 def fb_login(request: Request):
     user = request.session.get("user")
-    print(f"Session user in /fb/login: {user}")  # Debug log
     if not user or "id" not in user:
-        print("No valid user session, redirecting to login")  # Debug log
         return RedirectResponse("/login")
-    state = f"{json.dumps({'id': user['id']}).replace(' ', '')}:{uuid.uuid4()}"  # Remove spaces for safety
-    request.session["fb_state"] = state  # Store state in session for validation
+    
+    # Generate a secure state with user ID and random nonce
+    state_data = {"user_id": user["id"], "nonce": str(uuid.uuid4())}
+    state = urllib.parse.quote(json.dumps(state_data))
+    request.session["fb_state"] = state  # Store encoded state in session
+    print(f"Generated state: {state}")  # Debug log
+
     redirect_uri = f"https://{BASE_DOMAIN}/fb/callback"
-    url = (
+    auth_url = (
         f"https://www.facebook.com/v19.0/dialog/oauth?"
         f"client_id={FB_APP_ID}&redirect_uri={redirect_uri}"
-        f"&state={urllib.parse.quote(state)}&scope=pages_show_list,pages_manage_posts"
+        f"&state={state}&scope=pages_show_list,pages_manage_posts"
     )
-    return RedirectResponse(url)
+    return RedirectResponse(auth_url)
 
 @router.get("/fb/callback")
-def fb_callback(request: Request, code: str | None = None, state: str | None = None, error: str | None = None, error_message: str | None = None):
+def fb_callback(request: Request, code: str = None, state: str = None, error: str = None, error_message: str = None):
     print(f"Callback params: code={code}, state={state}, error={error}, error_message={error_message}")  # Debug log
+    
     if error:
-        return HTMLResponse(f"<h3 style='color:red;'>Facebook error: {error_message}</h3>")
-
+        return HTMLResponse(f"<h3 style='color:red'>Facebook error: {error_message}</h3>")
+    
     expected_state = request.session.get("fb_state")
     if not state or not expected_state or state != expected_state:
         print(f"State mismatch: received {state}, expected {expected_state}")  # Debug log
-        return RedirectResponse("/login")
+        return RedirectResponse("/login?error=state_mismatch")
+
     try:
-        print(f"Parsing state: {state}")  # Debug log
-        state_data, _ = state.split(':', 1)
-        user = json.loads(state_data.replace("'", '"'))  # Handle potential single quotes
-        print(f"Parsed user: {user}")  # Debug log
-        if not user or "id" not in user:
-            print("Invalid state data: missing id")  # Debug log
-            raise ValueError("Invalid state data")
-    except (ValueError, json.JSONDecodeError) as e:
+        # Decode and parse the state
+        decoded_state = urllib.parse.unquote(state)
+        print(f"Decoded state: {decoded_state}")  # Debug log
+        state_data = json.loads(decoded_state)
+        user_id = state_data.get("user_id")
+        if not user_id:
+            raise ValueError("Invalid state: missing user_id")
+        print(f"Parsed user_id: {user_id}")  # Debug log
+    except (json.JSONDecodeError, ValueError, KeyError) as e:
         print(f"State parsing error: {str(e)}")  # Debug log
-        return RedirectResponse("/login")
+        return RedirectResponse("/login?error=invalid_state")
 
     redirect_uri = f"https://{BASE_DOMAIN}/fb/callback"
 
     # 1) Get short-lived token
-    short_resp = requests.get("https://graph.facebook.com/v19.0/oauth/access_token", params={
+    token_response = requests.get("https://graph.facebook.com/v19.0/oauth/access_token", params={
         "client_id": FB_APP_ID,
         "redirect_uri": redirect_uri,
         "client_secret": FB_APP_SECRET,
         "code": code,
     })
-    if not short_resp.ok:
-        raise HTTPException(400, "Failed to get short-lived token")
-    short = short_resp.json().get("access_token")
-    if not short:
-        raise HTTPException(400, "No short-lived token received")
+    if not token_response.ok:
+        raise HTTPException(status_code=400, detail="Failed to get short-lived token")
+    short_token = token_response.json().get("access_token")
+    if not short_token:
+        raise HTTPException(status_code=400, detail="No short-lived token received")
 
     # 2) Exchange for long-lived token
-    long_resp = requests.get("https://graph.facebook.com/v19.0/oauth/access_token", params={
+    long_token_response = requests.get("https://graph.facebook.com/v19.0/oauth/access_token", params={
         "grant_type": "fb_exchange_token",
         "client_id": FB_APP_ID,
         "client_secret": FB_APP_SECRET,
-        "fb_exchange_token": short,
+        "fb_exchange_token": short_token,
     })
-    if not long_resp.ok:
-        raise HTTPException(400, "Failed to exchange token")
-    long_tok = long_resp.json().get("access_token")
-    if not long_tok:
-        raise HTTPException(400, "No long-lived token received")
+    if not long_token_response.ok:
+        raise HTTPException(status_code=400, detail="Failed to exchange token")
+    long_token = long_token_response.json().get("access_token")
+    if not long_token:
+        raise HTTPException(status_code=400, detail="No long-lived token received")
 
     # 3) Get user pages
-    pages_resp = requests.get("https://graph.facebook.com/v19.0/me/accounts", params={
-        "access_token": long_tok
+    pages_response = requests.get("https://graph.facebook.com/v19.0/me/accounts", params={
+        "access_token": long_token,
     })
-    if not pages_resp.ok:
-        raise HTTPException(400, "Failed to fetch pages")
-    pages = pages_resp.json().get("data", [])
-    
+    if not pages_response.ok:
+        raise HTTPException(status_code=400, detail="Failed to fetch pages")
+    pages = pages_response.json().get("data", [])
     if not pages:
-        raise HTTPException(400, "No FB pages found")
+        raise HTTPException(status_code=400, detail="No FB pages found")
 
     page = pages[0]
     page_id, page_token = page["id"], page["access_token"]
 
     # 4) Get Instagram business account (optional)
     ig_id = None
-    ig_resp = requests.get(
+    ig_response = requests.get(
         f"https://graph.facebook.com/v19.0/{page_id}",
         params={"fields": "instagram_business_account", "access_token": page_token}
     )
-    if ig_resp.ok:
-        ig_data = ig_resp.json().get("instagram_business_account", {})
+    if ig_response.ok:
+        ig_data = ig_response.json().get("instagram_business_account", {})
         ig_id = ig_data.get("id")
 
     # 5) Save FB Page
     upsert_social_record(
-        user_id=user["id"],
+        user_id=user_id,
         provider="facebook",
         account_id=page_id,
         access_token=page_token,
@@ -119,7 +124,7 @@ def fb_callback(request: Request, code: str | None = None, state: str | None = N
     # 6) Save IG Account (if exists)
     if ig_id:
         upsert_social_record(
-            user_id=user["id"],
+            user_id=user_id,
             provider="instagram",
             account_id=ig_id,
             access_token=page_token,
