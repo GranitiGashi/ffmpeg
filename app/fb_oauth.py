@@ -43,8 +43,14 @@ def fb_callback(request: Request, code: str = None, state: str = None, error: st
         return HTMLResponse(f"<h3 style='color:red'>Facebook error: {error_message}</h3>")
     
     expected_state = request.session.get("fb_state")
-    if not state or not expected_state or state != expected_state:
-        print(f"State mismatch: received {state}, expected {expected_state}")  # Debug log
+    if not state or not expected_state:
+        print(f"State missing: received {state}, expected {expected_state}")  # Debug log
+        return RedirectResponse("/login?error=state_missing")
+    
+    # Decode expected_state for comparison with unencoded state from Facebook
+    expected_state_decoded = urllib.parse.unquote(expected_state)
+    if state != expected_state_decoded:
+        print(f"State mismatch: received {state}, expected {expected_state_decoded}")  # Debug log
         return RedirectResponse("/login?error=state_mismatch")
 
     try:
