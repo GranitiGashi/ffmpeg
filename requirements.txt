@@ -12,3 +12,7 @@ supabase
 bcrypt
 pydantic
 python-jose
+pyjwt
+cryptography
+jwt
+functools
