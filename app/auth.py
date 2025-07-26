@@ -5,9 +5,13 @@ from app.supabase_client import (
     get_user_record, insert_user_record, verify_password
 )
 from jose import jwt
+import os
+from dotenv import load_dotenv
+
 router = APIRouter()
 
-
+load_dotenv()
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 ##############################################################################
 # Models
 ##############################################################################
@@ -17,7 +21,7 @@ class SignUpPayload(BaseModel):
     password: str
     full_name: str
     company_name: str
-    role: str = "user"  # Default role if not specified
+    role: str = "client"  # Default role if not specified
     permissions: dict = {}
 
 class LoginPayload(BaseModel):
