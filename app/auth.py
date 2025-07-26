@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, Request, HTTPException, Depends, Header
 from pydantic import BaseModel
 from app.supabase_client import (
     supabase, create_supabase_user, hash_pw,
@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 router = APIRouter()
 
 load_dotenv()
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
 ##############################################################################
 # Models
 ##############################################################################
@@ -32,34 +32,42 @@ class LoginPayload(BaseModel):
 # Signup (Admin Only)
 ##############################################################################
 
-@router.post("/api/signup")
-async def signup(payload: SignUpPayload, request: Request):
-    auth = request.headers.get("Authorization")
-    if not auth or not auth.startswith("Bearer "):
-        raise HTTPException(status_code=403, detail="Authorization header missing")
+def get_user_info_from_token(token: str):
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+    response = requests.get("{SUPABASE_URL}/auth/v1/user", headers=headers)
 
-    token = auth.split(" ")[1]
+    if response.status_code != 200:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    return response.json()
+
+@router.post("/api/signup")
+async def signup(payload: SignUpPayload, request: Request, authorization: str = Header(...)):
+    token = authorization.replace("Bearer ", "")
+    
+    user_info = get_user_info_from_token(token)
+
+    # Example: Check metadata for admin role
+    if user_info.get("user_metadata", {}).get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can register new users")
 
     try:
-        payload_data = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"],  audience="authenticated")
-        email = payload_data.get("email")
-        user = get_user_record(email)
-
-        if user["role"] != "admin":
-            raise HTTPException(status_code=403, detail="Only admins can register new users")
-
         uid = create_supabase_user(payload.email, payload.password)
+
         insert_user_record(
             uid,
             email=payload.email,
             password_hash=hash_pw(payload.password),
             full_name=payload.full_name,
             company_name=payload.company_name,
-            role=payload.role or "user",
-            permissions=payload.permissions or []
+            role=payload.role,
+            permissions=payload.permissions
         )
 
         return {"status": "success", "message": "Account created"}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
