@@ -12,6 +12,6 @@ supabase
 bcrypt
 pydantic
 python-jose
-pyjwt
+pyjwt==2.6.0
 cryptography
 jwt
