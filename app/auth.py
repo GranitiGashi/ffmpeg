@@ -4,7 +4,7 @@ from app.supabase_client import (
     supabase, create_supabase_user, hash_pw,
     get_user_record, insert_user_record, verify_password
 )
-
+from jose import jwt
 router = APIRouter()
 
 
@@ -30,24 +30,29 @@ class LoginPayload(BaseModel):
 
 @router.post("/api/signup")
 async def signup(payload: SignUpPayload, request: Request):
-    user_session = request.session.get("user")
+    auth = request.headers.get("Authorization")
+    if not auth or not auth.startswith("Bearer "):
+        raise HTTPException(status_code=403, detail="Authorization header missing")
 
-    if not user_session or user_session.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can register new users")
+    token = auth.split(" ")[1]
 
     try:
-        # Create Supabase user
-        uid = create_supabase_user(payload.email, payload.password)
+        payload_data = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"])
+        email = payload_data.get("email")
+        user = get_user_record(email)
 
-        # Insert custom user record into your table
+        if user["role"] != "admin":
+            raise HTTPException(status_code=403, detail="Only admins can register new users")
+
+        uid = create_supabase_user(payload.email, payload.password)
         insert_user_record(
             uid,
             email=payload.email,
             password_hash=hash_pw(payload.password),
             full_name=payload.full_name,
             company_name=payload.company_name,
-            role=payload.role,
-            permissions=payload.permissions
+            role=payload.role or "user",
+            permissions=payload.permissions or []
         )
 
         return {"status": "success", "message": "Account created"}

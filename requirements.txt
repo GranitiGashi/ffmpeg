@@ -11,3 +11,4 @@ itsdangerous
 supabase
 bcrypt
 pydantic
+python-jose
