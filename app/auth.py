@@ -1,66 +1,71 @@
-import bcrypt
-from fastapi import APIRouter, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import APIRouter, Request
+from pydantic import BaseModel
 from app.supabase_client import (
-    supabase, create_supabase_user, hash_pw, verify_password,
-    get_user_record, insert_user_record
+    supabase, create_supabase_user, hash_pw, get_user_record, insert_user_record
 )
-from datetime import datetime, timedelta
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
+
 
 ##############################################################################
 # Sign-up (admin only) – optional
 ##############################################################################
-@router.get("/signup", response_class=HTMLResponse)
-async def signup_form(request: Request):
-    return templates.TemplateResponse("signup.html", {"request": request})
+class SignUpPayload(BaseModel):
+    email: str
+    password: str
 
-@router.post("/signup")
-async def signup(request: Request, email: str = Form(...), password: str = Form(...)):
+@router.post("/api/signup")
+async def signup(payload: SignUpPayload):
     try:
-        uid = create_supabase_user(email, password)
-        insert_user_record(uid, email, hash_pw(password))
-        return RedirectResponse("/login", status_code=303)
+        uid = create_supabase_user(payload.email, payload.password)
+        insert_user_record(uid, payload.email, hash_pw(payload.password))
+        return {"status": "success", "message": "Account created"}
     except Exception as e:
-        return templates.TemplateResponse("signup.html", {"request": request, "error": str(e)}, status_code=400)
+        return {"status": "error", "message": str(e)}
 
 ##############################################################################
 # Login
 ##############################################################################
-@router.get("/login", response_class=HTMLResponse)
-async def login_form(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+class LoginPayload(BaseModel):
+    email: str
+    password: str
 
-@router.post("/login")
-async def login(request: Request, email: str = Form(...), password: str = Form(...)):
-    record = get_user_record(email)
-    if not record:
-        return templates.TemplateResponse("login.html", {"request": request, "error": "User not found"}, status_code=401)
-    if not verify_password(password, record["password_hash"].encode()):
-        return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid credentials"}, status_code=401)
+@router.post("/api/login")
+async def login(payload: LoginPayload, request: Request):
+    record = get_user_record(payload.email)
+    if not record or not verify_password(payload.password, record["password_hash"].encode()):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    try:
-        session = supabase.auth.sign_in_with_password({"email": email, "password": password})
-        jwt_expires_at = datetime.fromtimestamp(session.session.expires_at)
-        request.session["user"] = {
+    session = supabase.auth.sign_in_with_password({
+        "email": payload.email,
+        "password": payload.password
+    })
+
+    jwt_expires_at = session.session.expires_at
+
+    # Optional: Store in session, or return JWT for frontend to store in localStorage
+    request.session["user"] = {
+        "id": record["id"],
+        "email": payload.email,
+        "jwt": session.session.access_token,
+        "expires_at": jwt_expires_at
+    }
+
+    return {
+        "status": "success",
+        "user": {
             "id": record["id"],
-            "email": email,
-            "jwt": session.session.access_token,
-            "expires_at": jwt_expires_at.isoformat()  # Store expiration for reference
+            "email": payload.email,
+            "access_token": session.session.access_token,
+            "expires_at": jwt_expires_at
         }
-        print(f"Login successful, session set: {request.session['user']}")  # Debug log
-        print(f"JWT expires at: {jwt_expires_at}")  # Debug log
-        return RedirectResponse("/", status_code=303)
-    except Exception as e:
-        return templates.TemplateResponse("login.html", {"request": request, "error": f"Authentication failed: {str(e)}"}, status_code=401)
+    }
+
 
 ##############################################################################
 # Logout
 ##############################################################################
-@router.get("/logout")
+@router.post("/api/logout")
 async def logout(request: Request):
     request.session.clear()
-    return RedirectResponse("/login")
+    return {"status": "success", "message": "Logged out"}
