@@ -37,7 +37,7 @@ def get_user_info_from_token(token: str):
     headers = {
         "Authorization": f"Bearer {token}"
     }
-    response = requests.get("{SUPABASE_URL}/auth/v1/user", headers=headers)
+    response = requests.get(f"{SUPABASE_URL}/auth/v1/user", headers=headers)
 
     if response.status_code != 200:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
