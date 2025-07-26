@@ -15,4 +15,3 @@ python-jose
 pyjwt
 cryptography
 jwt
-functools
