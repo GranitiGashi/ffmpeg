@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from app.supabase_client import (
-    supabase, create_supabase_user, hash_pw, get_user_record, insert_user_record
+    supabase, create_supabase_user, hash_pw, get_user_record, insert_user_record, verify_password
 )
 
 router = APIRouter()
