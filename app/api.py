@@ -1,8 +1,46 @@
 from fastapi import APIRouter, Request, HTTPException, Query
-from app.supabase_client import supabase
+from pydantic import BaseModel
+from app.supabase_client import (
+    create_supabase_user,
+    hash_pw,
+    insert_user_record,
+    verify_password,
+    get_user_record,
+    get_social_accounts,
+)
 import logging
 
 router = APIRouter()
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+@router.post("/register")
+def register_user(data: RegisterRequest):
+    existing = get_user_record(data.email)
+    if existing:
+        raise HTTPException(status_code=400, detail="User already exists")
+
+    uid = create_supabase_user(data.email, data.password)
+    hashed = hash_pw(data.password)
+    insert_user_record(uid, data.email, hashed)
+    return {"message": "User registered", "uid": uid}
+
+@router.post("/login")
+def login_user(data: LoginRequest):
+    user = get_user_record(data.email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not verify_password(data.password, user["password_hash"].encode()):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+
+    return {"message": "Login successful", "user_id": user["id"]}
 
 @router.get("/api/social-accounts")
 async def get_social_accounts(request: Request):
