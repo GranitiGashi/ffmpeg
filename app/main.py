@@ -11,6 +11,7 @@ from app.auth import router as auth_router
 from app.fb_oauth import router as fb_router
 from app.tiktok_oauth import router as tiktok_router
 from app.api import router as api_router
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
