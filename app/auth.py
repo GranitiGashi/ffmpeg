@@ -41,7 +41,7 @@ async def signup(payload: SignUpPayload, request: Request):
     token = auth.split(" ")[1]
 
     try:
-        payload_data = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"])
+        payload_data = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"],  audience="authenticated")
         email = payload_data.get("email")
         user = get_user_record(email)
 
