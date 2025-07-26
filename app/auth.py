@@ -7,6 +7,7 @@ from app.supabase_client import (
 from jose import jwt
 import os
 from dotenv import load_dotenv
+import requests
 
 router = APIRouter()
 
