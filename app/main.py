@@ -22,6 +22,8 @@ from app.tiktok_oauth import router as tiktok_router
 from app.api import router as api_router
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.tasks import generate_video_task
+
 app = FastAPI()
 
 app.add_middleware(
@@ -74,23 +76,12 @@ async def connect_tiktok():
 @app.post("/generate-video/")
 def generate_video_endpoint(request: VideoRequest):
     job_id = str(uuid.uuid4())
-    tmp_dir = f"tmp/{job_id}"
-    os.makedirs(tmp_dir, exist_ok=True)
-    output_path = os.path.join(tmp_dir, "output.mp4")
-
-    try:
-        transitions, template_name = get_random_template()
-        image_paths = download_images(request.image_urls, folder=tmp_dir)
-        generate_cool_video(image_paths, output=output_path, transitions=transitions)
-
-        return {
-            "status": "success",
-            "video_path": f"/videos/{job_id}/output.mp4",
-            "template_used": template_name
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    task = generate_video_task.delay(request.image_urls, job_id)  # enqueue task
+    return {
+        "status": "submitted",
+        "task_id": task.id,
+        "job_id": job_id
+    }
 
 @app.get("/videos/{job_id}/output.mp4")
 def get_video(job_id: str):
