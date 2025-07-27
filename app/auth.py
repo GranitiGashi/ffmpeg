@@ -5,13 +5,10 @@ from app.supabase_client import (
     supabase, create_supabase_user, hash_pw,
     get_user_record, insert_user_record, verify_password
 )
-from jose import jwt, jwk
-from jose.utils import base64url_decode
+from jose import JWTError, jwt
 import os
-import requests
 from typing import Dict
-from functools import lru_cache
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 router = APIRouter()
@@ -20,9 +17,10 @@ router = APIRouter()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Env vars
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-JWKS_URL = f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json"
+# Environment variables
+SECRET_KEY = "aff51256575b1b07cc23ec80c8ddb362"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
 ###############################################################################
 # Models
@@ -41,43 +39,32 @@ class LoginPayload(BaseModel):
     password: str = Field(..., min_length=8, max_length=100)
 
 ###############################################################################
-# JWT Verifier
+# JWT Utilities
 ###############################################################################
 
-@lru_cache()
-def fetch_jwks():
-    res = requests.get(JWKS_URL)
-    if res.status_code != 200:
-        raise HTTPException(status_code=500, detail="Unable to fetch JWKS")
-    return res.json()["keys"]
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-def verify_admin_token(authorization: str = Header(...)):
+def decode_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+def get_current_user(authorization: str = Header(...)):
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid authorization header")
+    token = authorization.split(" ")[1]
+    return decode_token(token)
 
-    token = authorization.replace("Bearer ", "")
-    unverified_header = jwt.get_unverified_header(token)
-    kid = unverified_header.get("kid")
-    if not kid:
-        raise HTTPException(status_code=401, detail="Invalid token header")
-
-    key = next((k for k in fetch_jwks() if k["kid"] == kid), None)
-    if not key:
-        raise HTTPException(status_code=401, detail="Invalid signing key")
-
-    public_key = jwk.construct(key)
-    message, encoded_sig = token.rsplit(".", 1)
-    decoded_sig = base64url_decode(encoded_sig.encode())
-
-    if not public_key.verify(message.encode(), decoded_sig):
-        raise HTTPException(status_code=401, detail="Invalid signature")
-
-    payload = jwt.decode(token, public_key, algorithms=["RS256"], options={"verify_aud": False})
-
-    if payload.get("role") != "authenticated" or payload.get("user_metadata", {}).get("role") != "admin":
+def verify_admin_token(user: dict = Depends(get_current_user)):
+    if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
-
-    return payload
+    return user
 
 ###############################################################################
 # Routes
@@ -102,31 +89,17 @@ async def signup(payload: SignUpPayload, user_info: Dict = Depends(verify_admin_
         permissions=payload.permissions
     )
 
-    return {"status": "success", "user_id": uid}
+    token = create_access_token({"sub": payload.email, "role": payload.role})
+    return {"status": "success", "user_id": uid, "token": token}
 
 @router.post("/api/login")
-async def login(payload: LoginPayload, request: Request):
+async def login(payload: LoginPayload):
     record = get_user_record(payload.email)
     if not record or not verify_password(payload.password, record["password_hash"].encode()):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    session = supabase.auth.sign_in_with_password({
-        "email": payload.email,
-        "password": payload.password
-    })
-
-    if not session.session:
-        raise HTTPException(status_code=401, detail="Login failed")
-
-    request.session["user"] = {
-        "id": record["id"],
-        "email": record["email"],
-        "jwt": session.session.access_token,
-        "expires_at": session.session.expires_at,
-        "role": record.get("role", "client")
-    }
-
-    return {"status": "success", "access_token": session.session.access_token}
+    token = create_access_token({"sub": payload.email, "role": record.get("role", "client")})
+    return {"status": "success", "access_token": token}
 
 @router.post("/api/logout")
 async def logout(request: Request):

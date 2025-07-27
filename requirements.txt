@@ -8,10 +8,10 @@ boto3
 jinja2
 python-multipart
 itsdangerous
-supabase
-bcrypt
+supabase==1.0.3
+bcrypt==4.1.2
 pydantic
-python-jose
+python-jose==3.3.0
 pyjwt==2.6.0
 cryptography
 jwt
