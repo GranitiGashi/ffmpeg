@@ -11,9 +11,10 @@ load_dotenv()
 
 _SUPA_URL = os.getenv("SUPABASE_URL")
 _SUPA_KEY = os.getenv("SUPABASE_KEY")
+_SUPA_SERVICE_ROLE = os.getenv("SUPABASE_SERVICE_ROLE")
 
 def get_supabase_client(token: Optional[str] = None) -> Client:
-    client = create_client(_SUPA_URL, _SUPA_KEY)
+    client = create_client(_SUPA_URL, _SUPA_SERVICE_ROLE)
     if token:
         client.auth.set_auth(token)
     return client
