@@ -9,7 +9,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from pydantic import BaseModel
 from typing import List
-from app.video_utils import download_images, generate_cool_video
+from app.generate import download_images, generate_cool_video
 from app.transitions import get_random_template
 
 # Ensure Supabase client loads
