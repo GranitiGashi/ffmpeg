@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException, Query
 from pydantic import BaseModel
+from app.supabase_client import supabase
 from app.supabase_client import (
     create_supabase_user,
     hash_pw,
