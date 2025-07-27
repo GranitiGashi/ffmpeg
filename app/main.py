@@ -74,15 +74,17 @@ async def connect_tiktok():
 
 
 @app.post("/generate-video/")
-def generate_video_endpoint(request: VideoRequest):
+async def generate_video_endpoint(request: VideoRequest):
     job_id = str(uuid.uuid4())
-    task = generate_video_task.delay(request.image_urls, job_id)  # enqueue task
+    # Pass only image_urls to Celery task; job_id generated inside task for uniqueness
+    task = generate_video_task.delay(request.image_urls)
     return {
         "status": "submitted",
         "task_id": task.id,
-        "job_id": job_id
+        "job_id": job_id  # Note: job_id generated here is not linked to the task's job_id in task
     }
 
+# Endpoint to serve generated video from local storage (optional if you rely on R2 URL)
 @app.get("/videos/{job_id}/output.mp4")
 def get_video(job_id: str):
     file_path = f"tmp/{job_id}/output.mp4"
