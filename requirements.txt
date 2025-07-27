@@ -15,4 +15,4 @@ python-jose
 pyjwt==2.6.0
 cryptography
 jwt
-pydantic[email]==2.6.4
+pydantic[email]==1.10.13
