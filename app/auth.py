@@ -99,7 +99,12 @@ async def login(payload: LoginPayload):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_access_token({"sub": payload.email, "role": record.get("role", "client")})
-    return {"status": "success", "access_token": token}
+    return {
+        "status": "success",
+          "access_token": token,
+          "email": payload.email,
+          "role": record.get("role", "client")
+          }
 
 @router.post("/api/logout")
 async def logout(request: Request):
