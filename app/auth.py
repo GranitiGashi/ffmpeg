@@ -101,7 +101,7 @@ async def login(payload: LoginPayload):
     # Prepare user data for token and response
     user_data = {
         "sub": payload.email,
-        "user_id": record.get("uid"),
+        "user_id": record.get("id"),
         "role": record.get("role", "client"),
         "full_name": record.get("full_name"),
         "company_name": record.get("company_name"),
