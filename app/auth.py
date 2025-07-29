@@ -98,13 +98,24 @@ async def login(payload: LoginPayload):
     if not record or not verify_password(payload.password, record["password_hash"].encode()):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = create_access_token({"sub": payload.email, "role": record.get("role", "client")})
+    # Prepare user data for token and response
+    user_data = {
+        "sub": payload.email,
+        "user_id": record.get("uid"),
+        "role": record.get("role", "client"),
+        "full_name": record.get("full_name"),
+        "company_name": record.get("company_name"),
+        "permissions": record.get("permissions", {})
+    }
+
+    token = create_access_token(user_data)
+
     return {
         "status": "success",
-          "access_token": token,
-          "email": payload.email,
-          "role": record.get("role", "client")
-          }
+        "access_token": token,
+        "token_type": "bearer",
+        "user": user_data
+    }
 
 @router.post("/api/logout")
 async def logout(request: Request):
